@@ -7,12 +7,15 @@ from colors import *
 class Agent:
     num_of_agents = 0
 
+    sensor_positions = ((55, 20), (60, 0), (55, -20))
+
     def __init__(self, simulation, movement_speed: int = 10, turning_speed: int = 10):
         self.simulation = simulation
         self.movement_speed = movement_speed
         self.turning_speed = turning_speed
 
         self.color = white
+
 
         # Determine start location and rotation
         while True:
@@ -36,6 +39,10 @@ class Agent:
         self.name = "agent_" + str(Agent.num_of_agents)
         Agent.num_of_agents += 1
 
+
+        self.sensor_coords = self.calculate_sensor_coords()
+        self.sensor_collisions = [None, None, None]
+
     def update(self):
 
         # Randomly change direction
@@ -56,5 +63,34 @@ class Agent:
         self.location = (max(0, min(self.location[0], self.simulation.size[0] - 1)),
                          max(0, min(self.location[1], self.simulation.size[1] - 1)))
 
+        # Update sensor coords
+        self.sensor_coords = self.calculate_sensor_coords()
+        self.sensor_collisions = [None, None, None]
+
     def move(self, coordinates: (int, int)):
         self.location = coordinates
+
+
+    def calculate_sensor_coords(self):
+        # Convert angle to radians
+        angle_rad = math.radians(self.rotation)
+        # Define the rotation matrix
+        rotation_matrix = [
+            [math.cos(angle_rad), -math.sin(angle_rad)],
+            [math.sin(angle_rad), math.cos(angle_rad)]
+        ]
+        # Apply the rotation matrix to each point
+        rotated_positions = []
+        for point in Agent.sensor_positions:
+            rotated_point = [
+                point[0] * rotation_matrix[0][0] + point[1] * rotation_matrix[0][1],
+                point[0] * rotation_matrix[1][0] + point[1] * rotation_matrix[1][1]
+            ]
+
+            # Add current coords
+            rotated_point = (rotated_point[0] + self.location[0], rotated_point[1] + self.location[1])
+
+            rotated_positions.append(rotated_point)
+
+        return rotated_positions
+
