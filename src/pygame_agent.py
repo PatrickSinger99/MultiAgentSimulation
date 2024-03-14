@@ -46,7 +46,14 @@ class Agent:
     def update(self):
 
         # Randomly change direction
-        self.rotation = self.rotation + random.randint(-self.turning_speed, self.turning_speed)
+        if self.sensor_collisions[0] is not None:
+            self.rotation = self.rotation - self.turning_speed
+
+        elif self.sensor_collisions[2] is not None:
+            self.rotation = self.rotation + self.turning_speed
+
+        else:
+            self.rotation = self.rotation + random.randint(-self.turning_speed, self.turning_speed)
 
         # Keep rotation between 0 and 359 degrees
         self.rotation = self.rotation % 360
