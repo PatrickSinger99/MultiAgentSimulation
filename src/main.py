@@ -5,30 +5,38 @@ import math
 from colors import *
 import random
 import time
+from typing import Tuple
 
 
-def run_simulation(screen_size_x: int, screen_size_y: int, number_of_agents: int = 20, simulation_fps: int = 30,
+def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int = 30, number_of_agents: int = 20,
                    player_controlled_agent: bool = False):
+    """
+    Starts a new simulation and runs the main game loop. Parameters for the simulation are defined here.
+    :param environment_dimensions: Dimensions of the simulation area defined as a tuple (x, y).
+    :param simulation_fps: Target frames per second of the simulation.
+    :param number_of_agents: Number of agents that get spawned into the simulation.
+    :param player_controlled_agent: Define if a user controllable agent should be spawned.
+    """
 
-    # Initialize Pygame and set up the window
+    # Initialize pygame and set up the window
     pygame.init()
     pygame.font.init()
     pygame.display.set_caption("Simulation")
-    screen = pygame.display.set_mode([screen_size_x, screen_size_y])
+    screen = pygame.display.set_mode(environment_dimensions)
 
     # Create game loop variables
     done = False
     clock = pygame.time.Clock()
     delta_time_last_frame = 1
 
-    # Create Game instance
-    simulation = Simulation(size=(screen_size_x, screen_size_y), number_of_agents=number_of_agents,
+    # Create simulation instance
+    simulation = Simulation(size=environment_dimensions, number_of_agents=number_of_agents,
                             player_controlled_agent=player_controlled_agent)
 
     """ MAIN GAME LOOP """
 
     while not done:
-
+        # Run all simulation functions for one step/frame of the simulation
         done = simulation.process_events()
         simulation.update()
         simulation.display_frame(screen, delta_time_last_frame)
@@ -36,17 +44,28 @@ def run_simulation(screen_size_x: int, screen_size_y: int, number_of_agents: int
         # Display updated screen
         pygame.display.flip()
 
-        # Tick game and save time this frame took to render
+        # Tick game and save time this frame took to compute
         delta_time_last_frame = clock.tick(simulation_fps) / 1000
 
 
 class Simulation:
+    """
+    Main class for running the multi agent simulation.
+    """
 
     # Figures
     entity_polygon = [(0, 0), (-10, -5), (-8, 0), (-10, +5)]
 
     def __init__(self, size, number_of_agents, player_controlled_agent=False):
+        """
+        Initialize the simulation.
+        :param size: Dimensions of the simulation area defined as a tuple (x, y).
+        :param number_of_agents: Number of agents that get spawned into the simulation.
+        :param player_controlled_agent: Define if a user controllable agent should be spawned.
+        """
         self.size = size
+
+        # Simulation element groups
         self.agents = []
         self.obstacles = pygame.sprite.Group()
 
@@ -54,24 +73,26 @@ class Simulation:
         self.debug_font = pygame.font.SysFont('Arial', 14)
         self.entity_info_font = pygame.font.SysFont("Arial", 12)
 
-        # States
+        # Display states
         self.show_agent_debug_info = False
         self.show_agent_sensors = False
-        self.show_control_hotkeys = False
+        self.show_control_hotkeys = True
 
         # Timers
         self.timer_agent_updates = 0
         self.timer_collision_handling = 0
         self.timer_draw_frame = 0
 
-        # TEMP Add random obstacles
+        # TODO TEMPORARY Add random obstacles
         for _ in range(5):
             self.add_obstacle(position=(random.randint(0, self.size[0]-300), random.randint(0, self.size[1]-300)),
-                              width=random.randint(50, 500),
-                              height=random.randint(50, 500))
+                              width=random.randint(50, 500), height=random.randint(50, 500))
 
         # Add border obstacles
         self.add_border(thickness=50)
+
+        # Calculate obstacle edges
+        self.obstacle_edges = self.get_obstacle_edges()
 
         # Add agents to simulation
         for _ in range(number_of_agents):
@@ -82,11 +103,12 @@ class Simulation:
 
         # Add player controlled agent
         if player_controlled_agent:
-            self.agents.append(PlayerControlledAgent(self, movement_speed=3, turning_speed=3, color=green))
+            self.agents.append(PlayerControlledAgent(self, movement_speed=3, turning_speed=2, color=green))
 
     def process_events(self):
         """
         Process input events by the player
+        :return State of simulation. True = Simulation ended.
         """
         for event in pygame.event.get():
 
@@ -116,35 +138,45 @@ class Simulation:
             agent.update()
         self.timer_agent_updates = time.time() - timer_start
 
-        # Collision detection
+        """Collision detection"""
+
         timer_start = time.time()
+        # Iterate over all agents and obstacles
         for agent in self.agents:
             for obstacle in self.obstacles:
 
-                # If collision is detected, calculate collision coords and move agent to them
+                # Check collision of agent with environment
                 if obstacle.rect.collidepoint(agent.location[0], agent.location[1]):
+                    # If collision is detected, calculate collision coords and move agent to them
                     agent_travel_line = (agent.prev_location, agent.location)
                     collision_coordinates = self.calculate_collision_point(agent_travel_line, obstacle)
                     if collision_coordinates is not None:
                         agent.move(collision_coordinates)
 
-                # TEMP TEST SENSORS
-                # TODO VERY BAD IMPLEMENTATION HORRIBLE PERFORMANCE
-                if self.show_agent_sensors:
-                    for i, sensor_coords in enumerate(agent.sensor_coords):
-                        sensor_line = (agent.location, sensor_coords)
-                        collision_coordinates = self.calculate_collision_point(sensor_line, obstacle, multiple_collision_points=True)
-                        if len(collision_coordinates) != 0:
-                            collision_candidates = collision_coordinates
-                            if agent.sensor_collisions[i] is not None:
-                                collision_candidates.append(agent.sensor_collisions[i])
+                    # Old agent sensors environment obstacle detection (much slower)
+                    """
+                    if self.show_agent_sensors:
+                        for i, sensor_coords in enumerate(agent.sensor_coords):
+                            sensor_line = (agent.location, sensor_coords)
+                            collision_coordinates = self.calculate_collision_point(sensor_line, obstacle,
+                                                                                   multiple_collision_points=True)
+                            if len(collision_coordinates) != 0:
+                                collision_candidates = collision_coordinates
+                                if agent.sensor_collisions[i] is not None:
+                                    collision_candidates.append(agent.sensor_collisions[i])
 
-                            distances = []
-                            for col in collision_candidates:
-                                distances.append(self.calculate_distance(col, agent.location))
+                                distances = []
+                                for col in collision_candidates:
+                                    distances.append(self.calculate_distance(col, agent.location))
 
-                            smallest_distance_index = distances.index(min(distances))
-                            agent.sensor_collisions[i] = collision_candidates[smallest_distance_index]
+                                smallest_distance_index = distances.index(min(distances))
+                                agent.sensor_collisions[i] = collision_candidates[smallest_distance_index]
+                    """
+
+        # Check collisions of agent sensors with environment
+        if self.show_agent_sensors:  # TODO for debug reasons only calculate collisions if shown on screen
+            for agent in self.agents:
+                agent.sensor_collision_detection()
 
         self.timer_collision_handling = time.time() - timer_start
 
@@ -322,5 +354,26 @@ class Simulation:
 
         return x, y
 
+    def get_obstacle_edges(self):
+        obstacle_edges = []
+
+        for obstacle in self.obstacles:
+            # Obstacle edge points
+            top_left = (obstacle.rect.x, obstacle.rect.y)
+            top_right = (obstacle.rect.x + obstacle.rect.width, obstacle.rect.y)
+            bottom_left = (obstacle.rect.x, obstacle.rect.y + obstacle.rect.height)
+            bottom_right = (obstacle.rect.x + obstacle.rect.width, obstacle.rect.y + obstacle.rect.height)
+
+            # Obstacle edge lines
+            edge_top = (top_left, top_right)
+            edge_right = (top_right, bottom_right)
+            edge_bottom = (bottom_left, bottom_right)
+            edge_left = (top_left, bottom_left)
+
+            obstacle_edges += [edge_top, edge_right, edge_bottom, edge_left]
+
+        return obstacle_edges
+
+
 if __name__ == '__main__':
-    run_simulation(1280, 720, simulation_fps=60, number_of_agents=100, player_controlled_agent=True)
+    run_simulation((1280, 720), simulation_fps=60, number_of_agents=100, player_controlled_agent=True)

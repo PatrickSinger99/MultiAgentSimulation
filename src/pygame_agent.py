@@ -41,6 +41,7 @@ class Agent:
         # TEMP
         self.sensor_coords = self.calculate_sensor_coords()
         self.sensor_collisions = [None, None, None]
+        self.sensor_collision_distance = [None, None, None]
 
     def update(self):
 
@@ -65,10 +66,10 @@ class Agent:
         # Update sensor coords
         self.sensor_coords = self.calculate_sensor_coords()
         self.sensor_collisions = [None, None, None]
+        self.sensor_collision_distance = [None, None, None]
 
     def move(self, coordinates: (int, int)):
         self.location = coordinates
-
 
     def calculate_sensor_coords(self):
         # Convert angle to radians
@@ -93,10 +94,60 @@ class Agent:
 
         return rotated_positions
 
+    def sensor_collision_detection(self):
+
+        possible_collision_edges = []
+
+        # Get all obstacle borders that are within the radius of a sensor ray to the agent
+        for edge in self.simulation.obstacle_edges:
+            if self.minimum_distance(edge, self.location) <= 60:  # TODO value hardcoded before Sensor placement rework
+                possible_collision_edges.append(edge)
+
+        # Check if edges in range for a collision actually collide with one of the agents sensor rays
+        for edge in possible_collision_edges:
+            for sensor_index, sensor in enumerate(self.sensor_coords):
+                sensor_line = (sensor, self.location)
+
+                # Check intersection with one sensor ray
+                intersection_coords = self.simulation.line_intersection(edge, sensor_line)
+                if intersection_coords is not None:
+
+                    # CASE: No other collision with this sensor ray was detected yet
+                    if self.sensor_collisions[sensor_index] is None:
+                        self.sensor_collisions[sensor_index] = intersection_coords
+                        # self.sensor_collision_distance[sensor_index] = collision_distance
+
+                    # CASE: Sensor ray already has a collision logged
+                    else:
+                        collision_distance = self.simulation.calculate_distance(intersection_coords, self.location)  # TODO method import from simulation
+
+                        # Distance for previous collision now needs to be calculated
+                        if self.sensor_collision_distance[sensor_index] is None:
+                            prev_collision_distance = self.simulation.calculate_distance(self.sensor_collisions[sensor_index], self.location)
+                            self.sensor_collision_distance[sensor_index] = prev_collision_distance
+
+                        # Add distance and new coords to arrays
+                        if self.sensor_collision_distance[sensor_index] > collision_distance:
+                            self.sensor_collisions[sensor_index] = intersection_coords
+                            self.sensor_collision_distance[sensor_index] = collision_distance
+
+    @staticmethod
+    def minimum_distance(line, point):
+        # v, w are points defining the line segment, and p is the point.
+        v, w, p = line[0], line[1], point
+
+        l2 = math.dist(v, w) ** 2  # i.e., |w-v|^2 - avoid a sqrt
+        if l2 == 0:
+            return math.dist(p, v)  # v == w case
+        t = max(0, min(1, ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2))
+        projection = (v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1]))
+        return math.dist(p, projection)
+
 
 class PlayerControlledAgent(Agent):
     def __init__(self, simulation, **kwargs):
         super().__init__(simulation=simulation, **kwargs)
+        self.name = "user_controlled_agent"
 
     def update(self):
 
@@ -114,7 +165,7 @@ class PlayerControlledAgent(Agent):
             rotation -= 1
 
         # Randomly change direction
-        self.rotation = self.rotation + rotation
+        self.rotation = self.rotation + rotation * self.turning_speed
 
         # Keep rotation between 0 and 359 degrees
         self.rotation = self.rotation % 360
@@ -134,3 +185,4 @@ class PlayerControlledAgent(Agent):
         # Update sensor coords
         self.sensor_coords = self.calculate_sensor_coords()
         self.sensor_collisions = [None, None, None]
+        self.sensor_collision_distance = [None, None, None]
