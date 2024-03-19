@@ -44,17 +44,12 @@ class Agent:
         self.vision_sensor = VisionSensor(self, num_of_rays=num_vision_sensors, ray_length=vision_sensors_length,
                                           fov=vision_sensors_fov)
 
-    def update(self):
+    def update(self, policy):
 
-        # Randomly change direction
-        if self.vision_sensor.sensor_collisions[-1] is not None:  # TODO Temp test
-            self.rotation = self.rotation - self.turning_speed
+        delta_rotation, delta_location = policy.execute(self)
 
-        elif self.vision_sensor.sensor_collisions[0] is not None:
-            self.rotation = self.rotation + self.turning_speed
-
-        else:
-            self.rotation = self.rotation + random.randint(-self.turning_speed, self.turning_speed)
+        # Apply rotation change
+        self.rotation = self.rotation + delta_rotation
 
         # Keep rotation between 0 and 359 degrees
         self.rotation = self.rotation % 360
@@ -64,8 +59,8 @@ class Agent:
         self.prev_location = self.location
 
         # Update location
-        self.location = (round(self.location[0] + math.cos(radians_rotation) * self.movement_speed),  # X Coordinate
-                         round(self.location[1] + math.sin(radians_rotation) * self.movement_speed))  # Y Coordinate
+        self.location = (round(self.location[0] + math.cos(radians_rotation) * delta_location),  # X Coordinate
+                         round(self.location[1] + math.sin(radians_rotation) * delta_location))  # Y Coordinate
 
         # Keep location within simulation boundary
         self.location = (max(0, min(self.location[0], self.simulation.size[0] - 1)),
@@ -155,7 +150,7 @@ class PlayerControlledAgent(Agent):
         super().__init__(simulation=simulation, **kwargs)
         self.name = "user_controlled_agent"
 
-    def update(self):
+    def update(self, policy):  # policy is only placeholder
 
         movement = 0
         rotation = 0

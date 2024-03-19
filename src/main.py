@@ -6,6 +6,7 @@ from colors import *
 import random
 import time
 from typing import Tuple
+from agent_policy import *
 
 
 def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int = 30, number_of_agents: int = 20,
@@ -96,8 +97,13 @@ class Simulation:
 
         # Add agents to simulation
         for _ in range(number_of_agents):
+            # TODO: TEMP test with randowm agent parameter values
             rand_speed = random.randint(1, 5)
-            new_agent = Agent(simulation=self, movement_speed=rand_speed)
+            rand_fov = random.randint(30, 120)
+            rand_sensor_length = random.randint(10, 100)
+            rand_num_sensors = random.randint(1, 10)
+            new_agent = Agent(simulation=self, movement_speed=rand_speed, vision_sensors_fov=rand_fov,
+                              vision_sensors_length=rand_sensor_length, num_vision_sensors=rand_num_sensors)
             new_agent.color = (280 - rand_speed * 25, 280 - rand_speed * 25, 255)
             self.agents.append(new_agent)
 
@@ -132,10 +138,13 @@ class Simulation:
         Update/Step forward the simulation
         """
 
+        # TODO TEMP Agents use policy depending on if sensors are shown
+        use_policy = RandomPolicy if not self.show_agent_sensors else SimpleCollisionAvoidancePolicy
+
         # Step agent movements
         timer_start = time.time()
         for agent in self.agents:
-            agent.update()
+            agent.update(policy=use_policy)
         self.timer_agent_updates = time.time() - timer_start
 
         """Collision detection"""

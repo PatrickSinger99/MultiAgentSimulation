@@ -20,14 +20,14 @@ class VisionSensor:
 
     def calculate_relative_sensor_positions(self):
         relative_sensor_positions = []
+        start_angle_rad = -math.radians(self.fov / 2)  # Corrected start angle based on fov
+
         if self.num_of_rays > 1:
             step_angle_rad = math.radians(self.fov / (self.num_of_rays - 1))
         else:
-            step_angle_rad = math.radians(self.fov / 2)
-        start_angle_rad = -math.radians(self.fov / 2)  # Corrected start angle based on fov
+            step_angle_rad = -start_angle_rad  # TODO FIX if only one sensor, position is not correct (skewed to side)
 
         for i in range(self.num_of_rays):
-
             adjacent = math.cos(start_angle_rad + step_angle_rad*i) * self.ray_length  # Ray length = Hypothenuse
             opposite = math.sin(start_angle_rad + step_angle_rad*i) * self.ray_length  # Ray length = Hypothenuse
             pos = (round(adjacent), round(opposite))
