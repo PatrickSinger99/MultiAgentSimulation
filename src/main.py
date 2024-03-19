@@ -78,6 +78,7 @@ class Simulation:
         self.show_agent_debug_info = False
         self.show_agent_sensors = False
         self.show_control_hotkeys = True
+        self.show_agent_pov = True  # TODO TEST
 
         # Timers
         self.timer_agent_updates = 0
@@ -109,7 +110,18 @@ class Simulation:
 
         # Add player controlled agent
         if player_controlled_agent:
-            self.agents.append(PlayerControlledAgent(self, movement_speed=3, turning_speed=2, color=green))
+            self.user_controlled_agent = PlayerControlledAgent(self, movement_speed=3, turning_speed=2, color=green,
+                                                               vision_sensors_fov=75, vision_sensors_length=300,
+                                                               num_vision_sensors=75)  # Add more sensors for user agent
+            self.agents.append(self.user_controlled_agent)
+
+        # TODO TEST
+        # Add agent vision pov surface
+        self.agent_pov_surface_size = (320, 180)
+        self.agent_pov_surface = pygame.Surface(self.agent_pov_surface_size)
+        self.agent_pov_surface.fill(black)
+        self.agent_pov_surface_draw_coords = (self.size[0]-self.agent_pov_surface_size[0],
+                                              self.size[1]-self.agent_pov_surface_size[1])
 
     def process_events(self):
         """
@@ -255,6 +267,39 @@ class Simulation:
 
             text_surface = self.debug_font.render("(R) Toggle Agent Sensors", True, blue)
             screen.blit(text_surface, (2, self.size[1] - 34))
+
+        # TODO TEMP only for user agent so far
+        if self.show_agent_pov:
+
+            self.agent_pov_surface.fill(black)
+
+            vision_line_thickness = math.ceil(self.agent_pov_surface_size[0] / self.user_controlled_agent.vision_sensor.num_of_rays)
+            surface_y_middle = int(self.agent_pov_surface_size[1] / 2)
+            max_vision_line_size = self.agent_pov_surface_size[1]
+            max_collision_distance = self.user_controlled_agent.vision_sensor.ray_length
+            display_size_per_distance_unit = max_vision_line_size / max_collision_distance
+            color_step_size = 200 / max_collision_distance
+
+            # Draw floor
+            pygame.draw.rect(self.agent_pov_surface, (50, 50, 50), (0, surface_y_middle, self.agent_pov_surface_size[0], surface_y_middle))
+
+            collision_distances = self.user_controlled_agent.get_collision_distances()
+            print(collision_distances)
+            for i, collision_distance in enumerate(collision_distances):
+                if collision_distance is not None:
+                    vision_line_length_pixel = max_vision_line_size - int(collision_distance * display_size_per_distance_unit)
+
+                    line_color = (0, 255 - (color_step_size*collision_distance), 0)
+
+                    # Calculate coords for one vision line
+                    vision_line_coords = (vision_line_thickness*i,  # X
+                                          surface_y_middle - int(vision_line_length_pixel/2),  # Y
+                                          vision_line_thickness,  # width
+                                          vision_line_length_pixel)  # height
+                    pygame.draw.rect(self.agent_pov_surface, line_color, vision_line_coords)
+
+            screen.blit(self.agent_pov_surface, self.agent_pov_surface_draw_coords)
+
 
         self.timer_draw_frame = time.time() - timer_start
 

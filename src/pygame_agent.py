@@ -144,6 +144,21 @@ class Agent:
         projection = (v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1]))
         return math.dist(p, projection)
 
+    def get_collision_distances(self):
+        """
+        Gets the distances for each sensor to the nearest collision. Also calculates distances for sensors that only
+        have one collision as this step was skipped to increase the performance in the base collision detection.
+        :return: List of distances to obstacle for each sensor
+        """
+
+        # Calculate all sensor collision distances that were skipped in the main collision function
+        for i, sensor_collision_coords in enumerate(self.vision_sensor.sensor_collisions):
+            if sensor_collision_coords is not None and self.vision_sensor.sensor_collision_distance[i] is None:
+                collision_distance = self.simulation.calculate_distance(sensor_collision_coords, self.location)
+                self.vision_sensor.sensor_collision_distance[i] = collision_distance
+
+        return self.vision_sensor.sensor_collision_distance
+
 
 class PlayerControlledAgent(Agent):
     def __init__(self, simulation, **kwargs):
@@ -185,3 +200,5 @@ class PlayerControlledAgent(Agent):
 
         # Update sensor coords
         self.vision_sensor.update()
+
+
