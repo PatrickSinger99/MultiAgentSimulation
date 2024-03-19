@@ -10,7 +10,8 @@ class Agent:
 
     sensor_positions = ((55, 20), (60, 0), (55, -20))
 
-    def __init__(self, simulation, movement_speed: int = 10, turning_speed: int = 10, color=white):
+    def __init__(self, simulation, movement_speed: int = 10, turning_speed: int = 10, color=white,
+                 num_vision_sensors: int = 3, vision_sensors_fov: int = 75, vision_sensors_length: int = 30):
         self.simulation = simulation
         self.movement_speed = movement_speed
         self.turning_speed = turning_speed
@@ -39,18 +40,17 @@ class Agent:
         self.name = "agent_" + str(Agent.num_of_agents)
         Agent.num_of_agents += 1
 
-        # TEMP
-        self.sensor_coords = self.calculate_sensor_coords()
-        self.sensor_collisions = [None, None, None]
-        self.sensor_collision_distance = [None, None, None]
+        # Initialize vision sensors
+        self.vision_sensor = VisionSensor(self, num_of_rays=num_vision_sensors, ray_length=vision_sensors_length,
+                                          fov=vision_sensors_fov)
 
     def update(self):
 
         # Randomly change direction
-        if self.sensor_collisions[0] is not None:
+        if self.vision_sensor.sensor_collisions[-1] is not None:  # TODO Temp test
             self.rotation = self.rotation - self.turning_speed
 
-        elif self.sensor_collisions[2] is not None:
+        elif self.vision_sensor.sensor_collisions[0] is not None:
             self.rotation = self.rotation + self.turning_speed
 
         else:
@@ -72,9 +72,7 @@ class Agent:
                          max(0, min(self.location[1], self.simulation.size[1] - 1)))
 
         # Update sensor coords
-        self.sensor_coords = self.calculate_sensor_coords()
-        self.sensor_collisions = [None, None, None]
-        self.sensor_collision_distance = [None, None, None]
+        self.vision_sensor.update()
 
     def move(self, coordinates: (int, int)):
         self.location = coordinates
@@ -108,12 +106,12 @@ class Agent:
 
         # Get all obstacle borders that are within the radius of a sensor ray to the agent
         for edge in self.simulation.obstacle_edges:
-            if self.minimum_distance(edge, self.location) <= 60:  # TODO value hardcoded before Sensor placement rework
+            if self.minimum_distance(edge, self.location) <= self.vision_sensor.ray_length:
                 possible_collision_edges.append(edge)
 
         # Check if edges in range for a collision actually collide with one of the agents sensor rays
         for edge in possible_collision_edges:
-            for sensor_index, sensor in enumerate(self.sensor_coords):
+            for sensor_index, sensor in enumerate(self.vision_sensor.sensor_coords):
                 sensor_line = (sensor, self.location)
 
                 # Check intersection with one sensor ray
@@ -121,8 +119,8 @@ class Agent:
                 if intersection_coords is not None:
 
                     # CASE: No other collision with this sensor ray was detected yet
-                    if self.sensor_collisions[sensor_index] is None:
-                        self.sensor_collisions[sensor_index] = intersection_coords
+                    if self.vision_sensor.sensor_collisions[sensor_index] is None:
+                        self.vision_sensor.sensor_collisions[sensor_index] = intersection_coords
                         # self.sensor_collision_distance[sensor_index] = collision_distance
 
                     # CASE: Sensor ray already has a collision logged
@@ -130,14 +128,14 @@ class Agent:
                         collision_distance = self.simulation.calculate_distance(intersection_coords, self.location)  # TODO method import from simulation
 
                         # Distance for previous collision now needs to be calculated
-                        if self.sensor_collision_distance[sensor_index] is None:
-                            prev_collision_distance = self.simulation.calculate_distance(self.sensor_collisions[sensor_index], self.location)
-                            self.sensor_collision_distance[sensor_index] = prev_collision_distance
+                        if self.vision_sensor.sensor_collision_distance[sensor_index] is None:
+                            prev_collision_distance = self.simulation.calculate_distance(self.vision_sensor.sensor_collisions[sensor_index], self.location)
+                            self.vision_sensor.sensor_collision_distance[sensor_index] = prev_collision_distance
 
                         # Add distance and new coords to arrays
-                        if self.sensor_collision_distance[sensor_index] > collision_distance:
-                            self.sensor_collisions[sensor_index] = intersection_coords
-                            self.sensor_collision_distance[sensor_index] = collision_distance
+                        if self.vision_sensor.sensor_collision_distance[sensor_index] > collision_distance:
+                            self.vision_sensor.sensor_collisions[sensor_index] = intersection_coords
+                            self.vision_sensor.sensor_collision_distance[sensor_index] = collision_distance
 
     @staticmethod
     def minimum_distance(line, point):
@@ -156,7 +154,6 @@ class PlayerControlledAgent(Agent):
     def __init__(self, simulation, **kwargs):
         super().__init__(simulation=simulation, **kwargs)
         self.name = "user_controlled_agent"
-        self.vision_sensor = VisionSensor(self, num_of_rays=5, ray_length=30, fov=180)
 
     def update(self):
 
@@ -193,40 +190,3 @@ class PlayerControlledAgent(Agent):
 
         # Update sensor coords
         self.vision_sensor.update()
-
-    def sensor_collision_detection(self):
-
-        possible_collision_edges = []
-
-        # Get all obstacle borders that are within the radius of a sensor ray to the agent
-        for edge in self.simulation.obstacle_edges:
-            if self.minimum_distance(edge, self.location) <= 60:  # TODO value hardcoded before Sensor placement rework
-                possible_collision_edges.append(edge)
-
-        # Check if edges in range for a collision actually collide with one of the agents sensor rays
-        for edge in possible_collision_edges:
-            for sensor_index, sensor in enumerate(self.vision_sensor.sensor_coords):
-                sensor_line = (sensor, self.location)
-
-                # Check intersection with one sensor ray
-                intersection_coords = self.simulation.line_intersection(edge, sensor_line)
-                if intersection_coords is not None:
-
-                    # CASE: No other collision with this sensor ray was detected yet
-                    if self.vision_sensor.sensor_collisions[sensor_index] is None:
-                        self.vision_sensor.sensor_collisions[sensor_index] = intersection_coords
-                        # self.sensor_collision_distance[sensor_index] = collision_distance
-
-                    # CASE: Sensor ray already has a collision logged
-                    else:
-                        collision_distance = self.simulation.calculate_distance(intersection_coords, self.location)  # TODO method import from simulation
-
-                        # Distance for previous collision now needs to be calculated
-                        if self.vision_sensor.sensor_collision_distance[sensor_index] is None:
-                            prev_collision_distance = self.simulation.calculate_distance(self.vision_sensor.sensor_collisions[sensor_index], self.location)
-                            self.vision_sensor.sensor_collision_distance[sensor_index] = prev_collision_distance
-
-                        # Add distance and new coords to arrays
-                        if self.vision_sensor.sensor_collision_distance[sensor_index] > collision_distance:
-                            self.vision_sensor.sensor_collisions[sensor_index] = intersection_coords
-                            self.vision_sensor.sensor_collision_distance[sensor_index] = collision_distance

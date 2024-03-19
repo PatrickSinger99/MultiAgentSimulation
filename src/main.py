@@ -208,20 +208,12 @@ class Simulation:
 
             # Draw sensors
             if self.show_agent_sensors:
-                if agent.name != "user_controlled_agent":  # TODO TEMP
-                    for i, sensor in enumerate(agent.sensor_coords):
-                        if agent.sensor_collisions[i] is not None:
-                            pygame.draw.line(screen, red, start_pos=agent.location, end_pos=agent.sensor_collisions[i])
-                            pygame.draw.circle(screen, red, agent.sensor_collisions[i], 2, 2)
-                        else:
-                            pygame.draw.line(screen, green, start_pos=agent.location, end_pos=sensor)
-                else:
-                    for i, sensor in enumerate(agent.vision_sensor.sensor_coords):
-                        if agent.vision_sensor.sensor_collisions[i] is not None:
-                            pygame.draw.line(screen, red, start_pos=agent.location, end_pos=agent.vision_sensor.sensor_collisions[i])
-                            pygame.draw.circle(screen, red, agent.vision_sensor.sensor_collisions[i], 2, 2)
-                        else:
-                            pygame.draw.line(screen, green, start_pos=agent.location, end_pos=sensor)
+                for i, sensor in enumerate(agent.vision_sensor.sensor_coords):
+                    if agent.vision_sensor.sensor_collisions[i] is not None:
+                        pygame.draw.line(screen, red, start_pos=agent.location, end_pos=agent.vision_sensor.sensor_collisions[i])
+                        pygame.draw.circle(screen, red, agent.vision_sensor.sensor_collisions[i], 2, 2)
+                    else:
+                        pygame.draw.line(screen, green, start_pos=agent.location, end_pos=sensor)
 
             # Rotate entity polygon to entities rotation and add its current location
             entity_polygon = self.rotate_polygon(Simulation.entity_polygon, agent.rotation)
