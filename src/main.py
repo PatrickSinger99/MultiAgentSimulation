@@ -112,7 +112,7 @@ class Simulation:
         if player_controlled_agent:
             self.user_controlled_agent = PlayerControlledAgent(self, movement_speed=3, turning_speed=2, color=green,
                                                                vision_sensors_fov=75, vision_sensors_length=300,
-                                                               num_vision_sensors=75)  # Add more sensors for user agent
+                                                               num_vision_sensors=100)  # Add more sensors for user agent
             self.agents.append(self.user_controlled_agent)
 
         # TODO TEST
@@ -284,7 +284,7 @@ class Simulation:
             pygame.draw.rect(self.agent_pov_surface, (50, 50, 50), (0, surface_y_middle, self.agent_pov_surface_size[0], surface_y_middle))
 
             collision_distances = self.user_controlled_agent.get_collision_distances()
-            print(collision_distances)
+
             for i, collision_distance in enumerate(collision_distances):
                 if collision_distance is not None:
                     vision_line_length_pixel = max_vision_line_size - int(collision_distance * display_size_per_distance_unit)
