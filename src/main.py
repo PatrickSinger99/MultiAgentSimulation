@@ -7,6 +7,7 @@ import random
 import time
 from typing import Tuple
 from agent_policy import *
+import utils
 
 
 def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int = 30, number_of_agents: int = 20,
@@ -174,26 +175,6 @@ class Simulation:
                     if collision_coordinates is not None:
                         agent.move(collision_coordinates)
 
-                    # Old agent sensors environment obstacle detection (much slower)
-                    """
-                    if self.show_agent_sensors:
-                        for i, sensor_coords in enumerate(agent.sensor_coords):
-                            sensor_line = (agent.location, sensor_coords)
-                            collision_coordinates = self.calculate_collision_point(sensor_line, obstacle,
-                                                                                   multiple_collision_points=True)
-                            if len(collision_coordinates) != 0:
-                                collision_candidates = collision_coordinates
-                                if agent.sensor_collisions[i] is not None:
-                                    collision_candidates.append(agent.sensor_collisions[i])
-
-                                distances = []
-                                for col in collision_candidates:
-                                    distances.append(self.calculate_distance(col, agent.location))
-
-                                smallest_distance_index = distances.index(min(distances))
-                                agent.sensor_collisions[i] = collision_candidates[smallest_distance_index]
-                    """
-
         # Check collisions of agent sensors with environment
         if self.show_agent_sensors:  # TODO for debug reasons only calculate collisions if shown on screen
             for agent in self.agents:
@@ -237,7 +218,7 @@ class Simulation:
                         pygame.draw.line(screen, green, start_pos=agent.location, end_pos=sensor)
 
             # Rotate entity polygon to entities rotation and add its current location
-            entity_polygon = self.rotate_polygon(Simulation.entity_polygon, agent.rotation)
+            entity_polygon = utils.rotate_polygon(Simulation.entity_polygon, agent.rotation)
             for i, coords in enumerate(entity_polygon):
                 entity_polygon[i] = (coords[0] + agent.location[0], coords[1] + agent.location[1])
 
@@ -273,7 +254,8 @@ class Simulation:
 
             self.agent_pov_surface.fill(black)
 
-            vision_line_thickness = math.ceil(self.agent_pov_surface_size[0] / self.user_controlled_agent.vision_sensor.num_of_rays)
+            vision_line_thickness = self.agent_pov_surface_size[0] / self.user_controlled_agent.vision_sensor.num_of_rays
+
             surface_y_middle = int(self.agent_pov_surface_size[1] / 2)
             max_vision_line_size = self.agent_pov_surface_size[1]
             max_collision_distance = self.user_controlled_agent.vision_sensor.ray_length
@@ -287,6 +269,7 @@ class Simulation:
 
             for i, collision_distance in enumerate(collision_distances):
                 if collision_distance is not None:
+
                     vision_line_length_pixel = max_vision_line_size - int(collision_distance * display_size_per_distance_unit)
 
                     line_color = (0, 255 - (color_step_size*collision_distance), 0)
@@ -294,7 +277,7 @@ class Simulation:
                     # Calculate coords for one vision line
                     vision_line_coords = (vision_line_thickness*i,  # X
                                           surface_y_middle - int(vision_line_length_pixel/2),  # Y
-                                          vision_line_thickness,  # width
+                                          math.ceil(vision_line_thickness),  # width
                                           vision_line_length_pixel)  # height
                     pygame.draw.rect(self.agent_pov_surface, line_color, vision_line_coords)
 
@@ -307,7 +290,8 @@ class Simulation:
         new_obstacle = Obstacle(position, width, height)
         self.obstacles.add(new_obstacle)
 
-    def calculate_collision_point(self, line, obstacle, multiple_collision_points=False):
+    @staticmethod
+    def calculate_collision_point(line, obstacle, multiple_collision_points=False):
         """
 
         :param line:
@@ -329,12 +313,12 @@ class Simulation:
         edge_left = (top_left, bottom_left)
         obstacle_lines = (edge_top, edge_right, edge_bottom, edge_left)
 
-        if multiple_collision_points:
-            intersections = []
+        # List of collisions. Only used when multiple_collision_points is true
+        intersections = []
 
         # Check every obstacle edge with the travel line of the agent
         for obstacle_edge in obstacle_lines:
-            intersection = self.line_intersection(obstacle_edge, line)
+            intersection = utils.line_intersection(obstacle_edge, line)
             if intersection is not None:
                 if multiple_collision_points:
                     intersections.append(intersection)
@@ -351,62 +335,6 @@ class Simulation:
         self.add_obstacle(position=(0, 0), width=self.size[0], height=thickness)
         self.add_obstacle(position=(self.size[0]-thickness, 0), width=thickness, height=self.size[1])
         self.add_obstacle(position=(0, self.size[1]-thickness), width=self.size[0], height=thickness)
-
-    @staticmethod
-    def calculate_distance(point1, point2):
-        x1, y1 = point1
-        x2, y2 = point2
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-
-    @staticmethod
-    def rotate_polygon(polygon, angle):
-        # Convert angle to radians
-        angle_rad = math.radians(angle)
-        # Define the rotation matrix
-        rotation_matrix = [
-            [math.cos(angle_rad), -math.sin(angle_rad)],
-            [math.sin(angle_rad), math.cos(angle_rad)]
-        ]
-        # Apply the rotation matrix to each point
-        rotated_polygon = []
-        for point in polygon:
-            rotated_point = [
-                point[0] * rotation_matrix[0][0] + point[1] * rotation_matrix[0][1],
-                point[0] * rotation_matrix[1][0] + point[1] * rotation_matrix[1][1]
-            ]
-            rotated_polygon.append(rotated_point)
-        return rotated_polygon
-
-    @staticmethod
-    def line_intersection(line1, line2, finite_line=True):
-        xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-        ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
-
-        def det(a, b):
-            return a[0] * b[1] - a[1] * b[0]
-
-        div = det(xdiff, ydiff)
-
-        # Lines do not intersect
-        if div == 0:
-            return None
-
-        d = (det(*line1), det(*line2))
-        x = round(det(d, xdiff) / div)
-        y = round(det(d, ydiff) / div)
-
-        if finite_line:
-            # Check if the intersection is within the bounds of line1
-            if not (min(line1[0][0], line1[1][0]) <= x <= max(line1[0][0], line1[1][0]) and
-                    min(line1[0][1], line1[1][1]) <= y <= max(line1[0][1], line1[1][1])):
-                return None
-
-            # Check if the intersection is within the bounds of line2
-            if not (min(line2[0][0], line2[1][0]) <= x <= max(line2[0][0], line2[1][0]) and
-                    min(line2[0][1], line2[1][1]) <= y <= max(line2[0][1], line2[1][1])):
-                return None
-
-        return x, y
 
     def get_obstacle_edges(self):
         obstacle_edges = []

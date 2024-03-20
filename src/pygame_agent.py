@@ -3,6 +3,7 @@ import random
 import math
 from colors import *
 from vision_sensor import VisionSensor
+import utils
 
 
 class Agent:
@@ -72,36 +73,13 @@ class Agent:
     def move(self, coordinates: (int, int)):
         self.location = coordinates
 
-    def calculate_sensor_coords(self):
-        # Convert angle to radians
-        angle_rad = math.radians(self.rotation)
-        # Define the rotation matrix
-        rotation_matrix = [
-            [math.cos(angle_rad), -math.sin(angle_rad)],
-            [math.sin(angle_rad), math.cos(angle_rad)]
-        ]
-        # Apply the rotation matrix to each point
-        rotated_positions = []
-        for point in Agent.sensor_positions:
-            rotated_point = [
-                point[0] * rotation_matrix[0][0] + point[1] * rotation_matrix[0][1],
-                point[0] * rotation_matrix[1][0] + point[1] * rotation_matrix[1][1]
-            ]
-
-            # Add current coords
-            rotated_point = (rotated_point[0] + self.location[0], rotated_point[1] + self.location[1])
-
-            rotated_positions.append(rotated_point)
-
-        return rotated_positions
-
     def sensor_collision_detection(self):
 
         possible_collision_edges = []
 
         # Get all obstacle borders that are within the radius of a sensor ray to the agent
         for edge in self.simulation.obstacle_edges:
-            if self.minimum_distance(edge, self.location) <= self.vision_sensor.ray_length:
+            if utils.minimum_distance(edge, self.location) <= self.vision_sensor.ray_length:
                 possible_collision_edges.append(edge)
 
         # Check if edges in range for a collision actually collide with one of the agents sensor rays
@@ -110,7 +88,7 @@ class Agent:
                 sensor_line = (sensor, self.location)
 
                 # Check intersection with one sensor ray
-                intersection_coords = self.simulation.line_intersection(edge, sensor_line)
+                intersection_coords = utils.line_intersection(edge, sensor_line)
                 if intersection_coords is not None:
 
                     # CASE: No other collision with this sensor ray was detected yet
@@ -120,29 +98,17 @@ class Agent:
 
                     # CASE: Sensor ray already has a collision logged
                     else:
-                        collision_distance = self.simulation.calculate_distance(intersection_coords, self.location)  # TODO method import from simulation
+                        collision_distance = utils.calculate_distance(intersection_coords, self.location)  # TODO method import from simulation
 
                         # Distance for previous collision now needs to be calculated
                         if self.vision_sensor.sensor_collision_distance[sensor_index] is None:
-                            prev_collision_distance = self.simulation.calculate_distance(self.vision_sensor.sensor_collisions[sensor_index], self.location)
+                            prev_collision_distance = utils.calculate_distance(self.vision_sensor.sensor_collisions[sensor_index], self.location)
                             self.vision_sensor.sensor_collision_distance[sensor_index] = prev_collision_distance
 
                         # Add distance and new coords to arrays
                         if self.vision_sensor.sensor_collision_distance[sensor_index] > collision_distance:
                             self.vision_sensor.sensor_collisions[sensor_index] = intersection_coords
                             self.vision_sensor.sensor_collision_distance[sensor_index] = collision_distance
-
-    @staticmethod
-    def minimum_distance(line, point):
-        # v, w are points defining the line segment, and p is the point.
-        v, w, p = line[0], line[1], point
-
-        l2 = math.dist(v, w) ** 2  # i.e., |w-v|^2 - avoid a sqrt
-        if l2 == 0:
-            return math.dist(p, v)  # v == w case
-        t = max(0, min(1, ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2))
-        projection = (v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1]))
-        return math.dist(p, projection)
 
     def get_collision_distances(self):
         """
@@ -154,7 +120,7 @@ class Agent:
         # Calculate all sensor collision distances that were skipped in the main collision function
         for i, sensor_collision_coords in enumerate(self.vision_sensor.sensor_collisions):
             if sensor_collision_coords is not None and self.vision_sensor.sensor_collision_distance[i] is None:
-                collision_distance = self.simulation.calculate_distance(sensor_collision_coords, self.location)
+                collision_distance = utils.calculate_distance(sensor_collision_coords, self.location)
                 self.vision_sensor.sensor_collision_distance[i] = collision_distance
 
         return self.vision_sensor.sensor_collision_distance
