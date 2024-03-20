@@ -5,3 +5,5 @@ Agents can use ray casting to detect obstacle edges and surrounding other agents
 A gui for display and control was built with pygame.
 
 This project is currently WIP
+
+![Screenshot](./imgs/wip_simulation_screenshot.PNG?raw=true "Simulation Screenshot")
