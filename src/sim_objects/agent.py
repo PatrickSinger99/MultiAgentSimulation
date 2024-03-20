@@ -10,8 +10,6 @@ from src import utils
 class Agent:
     num_of_agents = 0
 
-    sensor_positions = ((55, 20), (60, 0), (55, -20))
-
     def __init__(self, simulation, movement_speed: int = 10, turning_speed: int = 10, color=white,
                  num_vision_sensors: int = 3, vision_sensors_fov: int = 75, vision_sensors_length: int = 30):
         self.simulation = simulation

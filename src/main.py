@@ -270,7 +270,6 @@ class Simulation:
                 if collision_distance is not None:
 
                     vision_line_length_pixel = max_vision_line_size - int(collision_distance * display_size_per_distance_unit)
-
                     line_color = (0, 255 - (color_step_size*collision_distance), 0)
 
                     # Calculate coords for one vision line
@@ -282,22 +281,27 @@ class Simulation:
 
             screen.blit(self.agent_pov_surface, self.agent_pov_surface_draw_coords)
 
-
         self.timer_draw_frame = time.time() - timer_start
 
     def add_obstacle(self, position: (int, int), width: int, height: int):
+        """
+        Add an obstacle to the simulation and its sprite group.
+        :param position: (x, y) coordinates for top left position of the obstacle.
+        :param width: Width of the obstacle.
+        :param height: Height of the obstacle.
+        """
         new_obstacle = Obstacle(position, width, height)
         self.obstacles.add(new_obstacle)
 
     @staticmethod
     def calculate_collision_point(line, obstacle, multiple_collision_points=False):
         """
-
-        :param line:
-        :param obstacle:
+        Calculate the collision(s) between a line and an obstacle. Runs line intersections for all edges of the obstacle
+        :param line: Line with its start and end coordinates.
+        :param obstacle: Obstacle object from the simulation.
         :param multiple_collision_points: Enable, if multiple collisions points are possible with the obstacle.
                                           Togglable because of performance gains.
-        :return:
+        :return: List or Point of collision(s) depending on the multiple_collision_points parameter.
         """
         # Obstacle edge points
         top_left = (obstacle.rect.x, obstacle.rect.y)
@@ -330,12 +334,21 @@ class Simulation:
             return None
 
     def add_border(self, thickness: int = 20):
+        """
+        Adds a border of obstacle objects around the simulation area.
+        :param thickness: width of the border.
+        """
         self.add_obstacle(position=(0, 0), width=thickness, height=self.size[1])
         self.add_obstacle(position=(0, 0), width=self.size[0], height=thickness)
         self.add_obstacle(position=(self.size[0]-thickness, 0), width=thickness, height=self.size[1])
         self.add_obstacle(position=(0, self.size[1]-thickness), width=self.size[0], height=thickness)
 
     def get_obstacle_edges(self):
+        """
+        Calculate and store all edges that the objects in the simulation have. This is intended to be run once at the
+        beginning of the simulation. By storing all edges as coordinates, collision detection is sped up.
+        :return: List of obstacle edge coordinates.
+        """
         obstacle_edges = []
 
         for obstacle in self.obstacles:

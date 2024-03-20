@@ -11,4 +11,3 @@ class Obstacle(pygame.sprite.Sprite):
         self.image.fill(grey)
         self.rect = self.image.get_rect()
         self.rect.topleft = position
-
