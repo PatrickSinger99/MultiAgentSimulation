@@ -88,6 +88,7 @@ class Agent:
 
                 # Check intersection with one sensor ray
                 intersection_coords = utils.line_intersection(edge, sensor_line)
+
                 if intersection_coords is not None:
 
                     # CASE: No other collision with this sensor ray was detected yet
@@ -97,7 +98,7 @@ class Agent:
 
                     # CASE: Sensor ray already has a collision logged
                     else:
-                        collision_distance = utils.calculate_distance(intersection_coords, self.location)  # TODO method import from simulation
+                        collision_distance = utils.calculate_distance(intersection_coords, self.location)
 
                         # Distance for previous collision now needs to be calculated
                         if self.vision_sensor.sensor_collision_distance[sensor_index] is None:
@@ -108,6 +109,29 @@ class Agent:
                         if self.vision_sensor.sensor_collision_distance[sensor_index] > collision_distance:
                             self.vision_sensor.sensor_collisions[sensor_index] = intersection_coords
                             self.vision_sensor.sensor_collision_distance[sensor_index] = collision_distance
+
+    def agent_vicinity_detection(self, detection_distance):
+
+        detected_agents = {}
+
+        for agent in self.simulation.agents:
+            if agent.name != self.name:
+                distance = utils.calculate_distance(self.location, agent.location)
+
+                if distance <= detection_distance:
+                    # Calculate the difference in coordinates
+                    delta_x = agent.location[0] - self.location[0]
+                    delta_y = agent.location[1] - self.location[1]
+
+                    # calculate relative angle to own rotation
+                    relative_angle = math.degrees(math.atan2(delta_y, delta_x)) - self.rotation
+
+                    # Keep rotation between 0 and 359 degrees
+                    relative_angle = relative_angle % 360
+
+                    detected_agents[agent] = (distance, relative_angle)
+
+        return detected_agents
 
     def get_collision_distances(self):
         """
@@ -165,5 +189,3 @@ class PlayerControlledAgent(Agent):
 
         # Update sensor coords
         self.vision_sensor.update()
-
-

@@ -1,5 +1,4 @@
 import pygame
-import math
 import time
 
 from src.colors import *
@@ -58,7 +57,7 @@ class Simulation:
     # Figures
     entity_polygon = [(0, 0), (-10, -5), (-8, 0), (-10, +5)]
 
-    def __init__(self, size, number_of_agents, player_controlled_agent=False):
+    def __init__(self, size: Tuple[int, int], number_of_agents: int, player_controlled_agent: bool = False):
         """
         Initialize the simulation.
         :param size: Dimensions of the simulation area defined as a tuple (x, y).
@@ -70,6 +69,7 @@ class Simulation:
         # Simulation element groups
         self.agents = []
         self.obstacles = pygame.sprite.Group()
+        self.selected_agent = None
 
         # Initialize fonts
         self.debug_font = pygame.font.SysFont('Arial', 14)
@@ -79,7 +79,7 @@ class Simulation:
         self.show_agent_debug_info = False
         self.show_agent_sensors = False
         self.show_control_hotkeys = True
-        self.show_agent_pov = True  # TODO TEST
+        self.show_agent_camera = False
 
         # Timers
         self.timer_agent_updates = 0
@@ -121,6 +121,9 @@ class Simulation:
         self.agent_camera_surface = AgentCameraSurface(size=self.agent_camera_dimensions,
                                                        agent=self.user_controlled_agent)
 
+        # TODO TEST
+        self.freeze_agents = False
+
     def process_events(self):
         """
         Process input events by the player
@@ -141,6 +144,13 @@ class Simulation:
                 if event.key == pygame.K_r:
                     self.show_agent_sensors = False if self.show_agent_sensors else True
 
+                # CASE: Toggle agent freeze
+                if event.key == pygame.K_f:
+                    self.freeze_agents = False if self.freeze_agents else True
+
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self._on_mouseclick()
+
         return False
 
     def update(self):
@@ -150,6 +160,14 @@ class Simulation:
 
         # TODO TEMP Agents use policy depending on if sensors are shown
         use_policy = RandomPolicy if not self.show_agent_sensors else SimpleCollisionAvoidancePolicy
+        if self.freeze_agents:
+            use_policy = FreezePolicy
+
+        if self.selected_agent is not None:
+            self.show_agent_camera = True
+        else:
+            self.show_agent_camera = False
+
 
         # Step agent movements
         timer_start = time.time()
@@ -169,6 +187,7 @@ class Simulation:
                     # If collision is detected, calculate collision coords and move agent to them
                     agent_travel_line = (agent.prev_location, agent.location)
                     collision_coordinates = self.calculate_collision_point(agent_travel_line, obstacle)
+
                     if collision_coordinates is not None:
                         agent.move(collision_coordinates)
 
@@ -218,9 +237,15 @@ class Simulation:
             entity_polygon = utils.rotate_polygon(Simulation.entity_polygon, agent.rotation)
             for i, coords in enumerate(entity_polygon):
                 entity_polygon[i] = (coords[0] + agent.location[0], coords[1] + agent.location[1])
+            
+            # Determine agent color
+            if self.selected_agent == agent:
+                color = blue
+            else:
+                color = agent.color
 
             # Draw entity polygon
-            pygame.draw.polygon(screen, agent.color, entity_polygon)
+            pygame.draw.polygon(screen, color, entity_polygon)
 
         # Display simulation infos
         if show_debug_info:
@@ -246,8 +271,11 @@ class Simulation:
             text_surface = self.debug_font.render("(R) Toggle Agent Sensors", True, blue)
             screen.blit(text_surface, (2, self.size[1] - 34))
 
+            text_surface = self.debug_font.render("(F) Toggle Agent Freeze", True, blue)
+            screen.blit(text_surface, (2, self.size[1] - 52))
+
         # Display the agent camera (POV) in the bottom right corner of the screen
-        if self.show_agent_pov:
+        if self.show_agent_camera:
             draw_coords = (self.size[0] - self.agent_camera_dimensions[0],
                            self.size[1] - self.agent_camera_dimensions[1])
             self.agent_camera_surface.display()  # Update camera display
@@ -340,6 +368,27 @@ class Simulation:
 
         return obstacle_edges
 
+    def _on_mouseclick(self, click_margin: int = 10):
+        mouse_position = pygame.mouse.get_pos()
+
+        near_agent = None
+        near_agent_distance = None
+
+        for agent in self.agents:
+            distance = utils.calculate_distance(mouse_position, agent.location)
+            if distance <= click_margin:
+                if near_agent is None:
+                    near_agent = agent
+                    near_agent_distance = distance
+                elif distance < near_agent_distance:
+                    near_agent = agent
+                    near_agent_distance = distance
+
+        self.selected_agent = near_agent
+
+        if near_agent is not None:
+            self.agent_camera_surface = AgentCameraSurface(self.agent_camera_dimensions, self.selected_agent)
+
 
 if __name__ == '__main__':
-    run_simulation((1280, 720), simulation_fps=60, number_of_agents=100, player_controlled_agent=True)
+    run_simulation((1280, 720), simulation_fps=60, number_of_agents=50, player_controlled_agent=True)

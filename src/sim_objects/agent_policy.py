@@ -50,3 +50,10 @@ class SimpleCollisionAvoidancePolicy(Policy):
         delta_location = agent.movement_speed
 
         return delta_rotation, delta_location
+
+
+class FreezePolicy(Policy):
+
+    @staticmethod
+    def execute(agent):
+        return 0, 0
