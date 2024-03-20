@@ -102,8 +102,8 @@ class Simulation:
             # TODO: TEMP test with randowm agent parameter values
             rand_speed = random.randint(1, 5)
             rand_fov = random.randint(30, 120)
-            rand_sensor_length = random.randint(10, 100)
-            rand_num_sensors = random.randint(1, 10)
+            rand_sensor_length = random.randint(50, 150)
+            rand_num_sensors = random.randint(3, 20)
             new_agent = Agent(simulation=self, movement_speed=rand_speed, vision_sensors_fov=rand_fov,
                               vision_sensors_length=rand_sensor_length, num_vision_sensors=rand_num_sensors)
             new_agent.color = (280 - rand_speed * 25, 280 - rand_speed * 25, 255)
