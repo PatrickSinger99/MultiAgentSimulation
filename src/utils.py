@@ -67,3 +67,7 @@ def rotate_polygon(polygon, angle):
         ]
         rotated_polygon.append(rotated_point)
     return rotated_polygon
+
+
+def elem_wise_add(list_1, list_2):
+    return [x + y for x, y in zip(list_1, list_2)]

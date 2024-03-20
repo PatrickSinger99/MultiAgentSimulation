@@ -9,11 +9,11 @@ from src import utils
 from src.gui_objects.agent_camera import AgentCameraSurface
 
 
-def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int = 30, number_of_agents: int = 20,
+def run_simulation(simulation_dimensions: Tuple[int, int], simulation_fps: int = 30, number_of_agents: int = 20,
                    player_controlled_agent: bool = False):
     """
     Starts a new simulation and runs the main game loop. Parameters for the simulation are defined here.
-    :param environment_dimensions: Dimensions of the simulation area defined as a tuple (x, y).
+    :param simulation_dimensions: Dimensions of the simulation area defined as a tuple (x, y).
     :param simulation_fps: Target frames per second of the simulation.
     :param number_of_agents: Number of agents that get spawned into the simulation.
     :param player_controlled_agent: Define if a user controllable agent should be spawned.
@@ -23,7 +23,7 @@ def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int 
     pygame.init()
     pygame.font.init()
     pygame.display.set_caption("Simulation")
-    screen = pygame.display.set_mode(environment_dimensions)
+    screen = pygame.display.set_mode(simulation_dimensions)
 
     # Create game loop variables
     done = False
@@ -31,7 +31,7 @@ def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int 
     delta_time_last_frame = 1
 
     # Create simulation instance
-    simulation = Simulation(size=environment_dimensions, number_of_agents=number_of_agents,
+    simulation = Simulation(size=simulation_dimensions, number_of_agents=number_of_agents,
                             player_controlled_agent=player_controlled_agent)
 
     """ MAIN GAME LOOP """
@@ -237,7 +237,7 @@ class Simulation:
             entity_polygon = utils.rotate_polygon(Simulation.entity_polygon, agent.rotation)
             for i, coords in enumerate(entity_polygon):
                 entity_polygon[i] = (coords[0] + agent.location[0], coords[1] + agent.location[1])
-            
+
             # Determine agent color
             if self.selected_agent == agent:
                 color = blue
