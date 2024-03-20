@@ -1,9 +1,10 @@
 import pygame
 import random
 import math
-from colors import *
-from vision_sensor import VisionSensor
-import utils
+
+from src.colors import *
+from src.sim_objects.agent_vision_sensor import VisionSensor
+from src import utils
 
 
 class Agent:

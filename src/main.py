@@ -1,13 +1,12 @@
 import pygame
-from pygame_agent import Agent, PlayerControlledAgent
-from pygame_obstacle import Obstacle
 import math
-from colors import *
-import random
 import time
-from typing import Tuple
-from agent_policy import *
-import utils
+
+from src.colors import *
+from src.sim_objects.agent_policy import *
+from src.sim_objects.agent import Agent, PlayerControlledAgent
+from src.sim_objects.obstacle import Obstacle
+from src import utils
 
 
 def run_simulation(environment_dimensions: Tuple[int, int], simulation_fps: int = 30, number_of_agents: int = 20,

@@ -1,5 +1,6 @@
 import pygame
-from colors import *
+
+from src.colors import *
 
 
 class Obstacle(pygame.sprite.Sprite):
