@@ -25,9 +25,14 @@ class VisionSensor:
         if self.num_of_rays > 1:
             step_angle_rad = math.radians(self.fov / (self.num_of_rays - 1))
         else:
-            step_angle_rad = -start_angle_rad  # TODO FIX if only one sensor, position is not correct (skewed to side)
+            step_angle_rad = -start_angle_rad
 
         for i in range(self.num_of_rays):
+
+            # Special Case: Only one ray
+            if self.num_of_rays == 1:
+                i = 1
+
             adjacent = math.cos(start_angle_rad + step_angle_rad*i) * self.ray_length  # Ray length = Hypothenuse
             opposite = math.sin(start_angle_rad + step_angle_rad*i) * self.ray_length  # Ray length = Hypothenuse
             pos = (round(adjacent), round(opposite))

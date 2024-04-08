@@ -112,8 +112,8 @@ class Simulation:
         # Add player controlled agent
         if player_controlled_agent:
             self.user_controlled_agent = PlayerControlledAgent(self, movement_speed=3, turning_speed=2, color=green,
-                                                               vision_sensors_fov=75, vision_sensors_length=300,
-                                                               num_vision_sensors=100)  # Add more sensors for user agent
+                                                               vision_sensors_fov=70, vision_sensors_length=500,
+                                                               num_vision_sensors=99)  # Add more sensors for user agent
             self.agents.append(self.user_controlled_agent)
 
         # Add agent vision pov surface
@@ -168,7 +168,6 @@ class Simulation:
         else:
             self.show_agent_camera = False
 
-
         # Step agent movements
         timer_start = time.time()
         for agent in self.agents:
@@ -197,6 +196,7 @@ class Simulation:
                 agent.sensor_collision_detection()
 
         self.timer_collision_handling = time.time() - timer_start
+
 
     def display_frame(self, screen, delta_time_last_frame, show_debug_info=True):
         """
@@ -391,4 +391,4 @@ class Simulation:
 
 
 if __name__ == '__main__':
-    run_simulation((1280, 720), simulation_fps=60, number_of_agents=50, player_controlled_agent=True)
+    run_simulation((1280, 720), simulation_fps=60, number_of_agents=60, player_controlled_agent=True)

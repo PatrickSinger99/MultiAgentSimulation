@@ -19,6 +19,8 @@ def minimum_distance(line, point):
     return math.dist(p, projection)
 
 
+# Old line intersection with 90 degree bug
+"""
 def line_intersection(line1, line2, finite_line=True):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
@@ -48,6 +50,42 @@ def line_intersection(line1, line2, finite_line=True):
             return None
 
     return x, y
+"""
+
+
+def cross_product(v1, v2):
+    return v1[0] * v2[1] - v1[1] * v2[0]
+
+
+# New line intersection: i dont know why this works and why finite line is not needed whyyyyy???????
+def line_intersection(line1, line2):
+    p1, p2, q1, q2 = line1[0], line1[1], line2[0], line2[1]
+
+    r = (p2[0] - p1[0], p2[1] - p1[1])
+    s = (q2[0] - q1[0], q2[1] - q1[1])
+
+    rxs = cross_product(r, s)
+    qp = (q1[0] - p1[0], q1[1] - p1[1])
+    qpxr = cross_product(qp, r)
+
+    # If r x s = 0 and (q - p) x r = 0, lines are collinear
+    if rxs == 0 and qpxr == 0:
+        return None  # Collinear lines do not intersect
+
+    # If r x s = 0 and (q - p) x r != 0, lines are parallel
+    if rxs == 0 and qpxr != 0:
+        return None  # Parallel lines do not intersect
+
+    t = cross_product(qp, s) / rxs
+    u = cross_product(qp, r) / rxs
+
+    # If 0 <= t <= 1 and 0 <= u <= 1, lines intersect
+    if 0 <= t <= 1 and 0 <= u <= 1:
+        # Calculate the intersection point
+        intersection = (p1[0] + t * r[0], p1[1] + t * r[1])
+        return intersection
+
+    return None  # Lines do not intersect
 
 
 def rotate_polygon(polygon, angle):
@@ -71,3 +109,8 @@ def rotate_polygon(polygon, angle):
 
 def elem_wise_add(list_1, list_2):
     return [x + y for x, y in zip(list_1, list_2)]
+
+
+if __name__ == '__main__':
+    a = line_intersection(((540, 263), (540.9685984979026, -36.721640554948635)), ((300, 200), (700, 200)))
+    print(a)
